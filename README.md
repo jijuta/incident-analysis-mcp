@@ -40,7 +40,7 @@ OpenSearch 인시던트 데이터를 분석하여 표, 차트, 보고서를 생�
 ## 🚀 Quick Install
 
 ```bash
-npm install -g /opt/docs/apps/opensearch/incident-analysis-mcp
+npm install -g git+https://github.com/jijuta/incident-analysis-mcp.git
 ```
 
 ## 📦 상세 설치 및 설정
@@ -53,7 +53,7 @@ npm install
 
 ### 2. 글로벌 설치 (권장)
 ```bash
-npm install -g /opt/docs/apps/opensearch/incident-analysis-mcp
+npm install -g git+https://github.com/jijuta/incident-analysis-mcp.git
 ```
 
 ### 3. 환경 변수 설정
