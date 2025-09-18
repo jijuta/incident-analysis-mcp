@@ -74,12 +74,42 @@ Claude Desktop 설정 파일에 다음과 같이 추가:
     "incident-analysis": {
       "command": "incident-analysis-mcp",
       "env": {
-        "MCP_SERVER_URL": "http://your-server:your-port"
+        "MCP_SERVER_URL": "http://20.41.120.173:8099"
       }
     }
   }
 }
 ```
+
+### 양쪽 도구 모두 사용하기 (권장)
+OpenSearch 검색 + 인시던트 분석 기능을 모두 사용하려면:
+
+```json
+{
+  "mcpServers": {
+    "opensearch": {
+      "command": "opensearch-mcp-inbridge",
+      "env": {
+        "MCP_SERVER_URL": "http://20.41.120.173:8099"
+      }
+    },
+    "incident-analysis": {
+      "command": "incident-analysis-mcp",
+      "env": {
+        "MCP_SERVER_URL": "http://20.41.120.173:8099"
+      }
+    }
+  }
+}
+```
+
+**💡 이렇게 설정하면 Claude Desktop에서 다음 모든 기능을 사용할 수 있습니다:**
+- 📝 OpenSearch 인덱스 검색 및 조회
+- 📊 인시던트 통계 분석
+- 📈 트렌드 차트 생성
+- 🎯 위협 유형 분석
+- 🌍 지리적 분포 분석
+- 📋 종합 보고서 생성
 
 ### 로컬 개발용
 ```json
@@ -89,14 +119,14 @@ Claude Desktop 설정 파일에 다음과 같이 추가:
       "command": "node",
       "args": ["/opt/docs/apps/opensearch/incident-analysis-mcp/index.js"],
       "env": {
-        "MCP_SERVER_URL": "http://your-server:your-port"
+        "MCP_SERVER_URL": "http://20.41.120.173:8099"
       }
     }
   }
 }
 ```
 
-**⚠️ 중요: 시스템 관리자에게 올바른 MCP_SERVER_URL 값을 문의하세요**
+**⚠️ 중요: 정확한 MCP_SERVER_URL을 사용하세요 (포트 8099)**
 
 ## 🏗️ 아키텍처
 
@@ -110,31 +140,55 @@ Claude Desktop → incident-analysis-mcp → MCP Server → OpenSearch
 - **No credentials in code**: OpenSearch 인증 정보는 백엔드 MCP 서버에서 관리
 - **Proxy pattern**: 직접 OpenSearch 연결 대신 중간 MCP 서버를 통한 안전한 접근
 
-## 📝 사용 예시
+## 💬 Claude Desktop에서 사용하는 방법
 
-### 1. 인시던트 통계 조회
+### 📊 기본 통계 분석
 ```
-인시던트 통계를 security-logs-* 인덱스에서 최근 7일간 분석해줘
-```
-
-### 2. 트렌드 차트 생성
-```
-최근 7일간 인시던트 트렌드를 일별로 차트로 보여줘
+"최근 7일간 인시던트 통계를 security-logs-* 인덱스에서 분석해줘"
+"threat-intelligence-* 인덱스의 인시던트 통계를 테이블로 보여줘"
+"지난 30일간 심각도별 인시던트 분포를 분석해줘"
 ```
 
-### 3. 위협 유형 분석
+### 📈 트렌드 분석 및 차트
 ```
-상위 10개 위협 유형을 분석해서 테이블과 차트로 보여줘
-```
-
-### 4. 지리적 분포 분석
-```
-국가별 인시던트 분포를 분석해줘
+"최근 7일간 인시던트 트렌드를 일별로 차트로 보여줘"
+"시간별 인시던트 발생 패턴을 1시간 간격으로 분석해줘"
+"최근 2주간 보안 이벤트 증감 추세를 그래프로 그려줘"
 ```
 
-### 5. 종합 보고서 생성
+### 🎯 위협 유형 분석
 ```
-최근 7일간의 종합적인 보안 인시던트 분석 보고서를 작성해줘
+"상위 10개 위협 유형을 분석해서 테이블과 파이차트로 보여줘"
+"malware 관련 위협을 분석하고 분포도를 차트로 생성해줘"
+"가장 빈번한 공격 유형 5개를 찾아서 시각화해줘"
+```
+
+### 🌍 지리적 분포 분석
+```
+"국가별 인시던트 분포를 분석해서 막대그래프로 보여줘"
+"지역별 보안 위험도를 분석하고 상위 10개국을 차트로 표시해줘"
+"아시아 지역의 인시던트 패턴을 분석해줘"
+```
+
+### 📋 종합 보고서 생성
+```
+"최근 7일간의 종합적인 보안 인시던트 분석 보고서를 작성해줘"
+"월간 보안 동향 보고서를 생성해줘 (최근 30일 기준)"
+"CEO용 보안 요약 보고서를 만들어줘"
+```
+
+### 🔍 고급 분석 요청
+```
+"특정 IP 대역(192.168.*)에서 발생한 인시던트를 분석해줘"
+"critical 등급 인시던트의 시간대별 분포를 분석해줘"
+"반복되는 공격 패턴을 찾아서 보고서로 정리해줘"
+```
+
+### ⚙️ 커스텀 분석 옵션
+```
+"log-security-* 인덱스에서 최근 14일간 데이터로 분석해줘"
+"threat_category 필드를 기준으로 위협 분류를 해줘"
+"source_country 필드로 지리적 분석을 수행해줘"
 ```
 
 ## 🏗️ 기술 스택
