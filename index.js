@@ -9,12 +9,28 @@ import {
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import axios from 'axios';
-import { createCanvas } from 'canvas';
-import Chart from 'chart.js/auto';
-import * as d3 from 'd3';
 import { markdownTable } from 'markdown-table';
 import { format, subDays, parseISO } from 'date-fns';
 import _ from 'lodash';
+
+// 차트 의존성을 선택적으로 로드
+let createCanvas, Chart, d3;
+let CHART_SUPPORT = false;
+
+try {
+  const canvasModule = await import('canvas');
+  const chartModule = await import('chart.js/auto');
+  const d3Module = await import('d3');
+
+  createCanvas = canvasModule.createCanvas;
+  Chart = chartModule.default;
+  d3 = d3Module;
+  CHART_SUPPORT = true;
+  console.error('✅ Chart support enabled');
+} catch (error) {
+  console.error('⚠️ Chart dependencies not available, running in table-only mode');
+  CHART_SUPPORT = false;
+}
 
 // MCP 서버 URL 설정 (환경변수로만 설정)
 const MCP_SERVER_URL = process.env.MCP_SERVER_URL;
@@ -350,64 +366,82 @@ async function createIncidentTrendChart(args) {
   const response = await executeOpenSearchQuery(query);
   const buckets = response.body.aggregations.trend.buckets;
 
-  // Chart.js를 위한 데이터 준비
-  const labels = buckets.map(bucket =>
-    format(parseISO(bucket.key_as_string), interval === '1h' ? 'MM-dd HH:mm' : 'MM-dd')
-  );
-  const data = buckets.map(bucket => bucket.doc_count);
+  // 테이블 데이터 준비
+  const tableData = buckets.map(bucket => [
+    format(parseISO(bucket.key_as_string), interval === '1h' ? 'MM-dd HH:mm' : 'MM-dd'),
+    bucket.doc_count.toString(),
+  ]);
 
-  // Canvas 생성 및 차트 그리기
-  const width = 800;
-  const height = 400;
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext('2d');
+  const table = markdownTable([
+    ['시간', '인시던트 수'],
+    ...tableData,
+  ]);
 
-  // Chart.js 차트 생성
-  const chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: '인시던트 수',
-        data: data,
-        borderColor: 'rgb(75, 192, 192)',
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-        tension: 0.1,
-      }],
+  const totalIncidents = buckets.reduce((sum, bucket) => sum + bucket.doc_count, 0);
+
+  let content = [
+    {
+      type: 'text',
+      text: `## 인시던트 트렌드 분석 (${interval} 간격)\n\n**총 ${totalIncidents}건의 인시던트가 발생했습니다.**\n\n${table}`,
     },
-    options: {
-      responsive: false,
-      animation: false,
-      plugins: {
-        title: {
-          display: true,
-          text: `인시던트 트렌드 (최근 ${days}일)`,
-        },
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-        },
-      },
-    },
-  });
+  ];
 
-  const buffer = canvas.toBuffer('image/png');
-  const base64Image = buffer.toString('base64');
+  // 차트 지원이 있으면 차트도 생성
+  if (CHART_SUPPORT) {
+    try {
+      const labels = buckets.map(bucket =>
+        format(parseISO(bucket.key_as_string), interval === '1h' ? 'MM-dd HH:mm' : 'MM-dd')
+      );
+      const data = buckets.map(bucket => bucket.doc_count);
 
-  return {
-    content: [
-      {
-        type: 'text',
-        text: `## 인시던트 트렌드 차트 (${interval} 간격)\n\n총 ${data.reduce((a, b) => a + b, 0)}건의 인시던트가 발생했습니다.`,
-      },
-      {
+      const width = 800;
+      const height = 400;
+      const canvas = createCanvas(width, height);
+      const ctx = canvas.getContext('2d');
+
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '인시던트 수',
+            data: data,
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1,
+          }],
+        },
+        options: {
+          responsive: false,
+          animation: false,
+          plugins: {
+            title: {
+              display: true,
+              text: `인시던트 트렌드 (최근 ${days}일)`,
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+
+      const buffer = canvas.toBuffer('image/png');
+      const base64Image = buffer.toString('base64');
+
+      content.push({
         type: 'image',
         data: base64Image,
         mimeType: 'image/png',
-      },
-    ],
-  };
+      });
+    } catch (error) {
+      console.error('Chart generation failed:', error.message);
+    }
+  }
+
+  return { content };
 }
 
 // 상위 위협 분석
@@ -455,52 +489,59 @@ async function analyzeTopThreats(args) {
     ...tableData,
   ]);
 
-  // 파이 차트 생성
-  const canvas = createCanvas(600, 600);
-  const ctx = canvas.getContext('2d');
-
-  const chart = new Chart(ctx, {
-    type: 'pie',
-    data: {
-      labels: threats.map(t => t.key),
-      datasets: [{
-        data: threats.map(t => t.doc_count),
-        backgroundColor: threats.map((_, i) =>
-          `hsl(${(i * 360) / threats.length}, 70%, 60%)`
-        ),
-      }],
+  let content = [
+    {
+      type: 'text',
+      text: `# 상위 위협 유형 분석 (최근 ${days}일)\n\n${table}`,
     },
-    options: {
-      responsive: false,
-      animation: false,
-      plugins: {
-        title: {
-          display: true,
-          text: `상위 ${top_count}개 위협 유형 분포`,
-        },
-        legend: {
-          position: 'right',
-        },
-      },
-    },
-  });
+  ];
 
-  const buffer = canvas.toBuffer('image/png');
-  const base64Image = buffer.toString('base64');
+  // 차트 지원이 있으면 파이 차트도 생성
+  if (CHART_SUPPORT) {
+    try {
+      const canvas = createCanvas(600, 600);
+      const ctx = canvas.getContext('2d');
 
-  return {
-    content: [
-      {
-        type: 'text',
-        text: `# 상위 위협 유형 분석 (최근 ${days}일)\n\n${table}`,
-      },
-      {
+      const chart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: threats.map(t => t.key),
+          datasets: [{
+            data: threats.map(t => t.doc_count),
+            backgroundColor: threats.map((_, i) =>
+              `hsl(${(i * 360) / threats.length}, 70%, 60%)`
+            ),
+          }],
+        },
+        options: {
+          responsive: false,
+          animation: false,
+          plugins: {
+            title: {
+              display: true,
+              text: `상위 ${top_count}개 위협 유형 분포`,
+            },
+            legend: {
+              position: 'right',
+            },
+          },
+        },
+      });
+
+      const buffer = canvas.toBuffer('image/png');
+      const base64Image = buffer.toString('base64');
+
+      content.push({
         type: 'image',
         data: base64Image,
         mimeType: 'image/png',
-      },
-    ],
-  };
+      });
+    } catch (error) {
+      console.error('Chart generation failed:', error.message);
+    }
+  }
+
+  return { content };
 }
 
 // 지리적 분포 분석
@@ -548,55 +589,62 @@ async function analyzeGeographicDistribution(args) {
     ...tableData,
   ]);
 
-  // 막대 차트 생성
-  const canvas = createCanvas(800, 500);
-  const ctx = canvas.getContext('2d');
-
-  const chart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: countries.slice(0, 10).map(c => c.key),
-      datasets: [{
-        label: '인시던트 수',
-        data: countries.slice(0, 10).map(c => c.doc_count),
-        backgroundColor: 'rgba(54, 162, 235, 0.8)',
-        borderColor: 'rgba(54, 162, 235, 1)',
-        borderWidth: 1,
-      }],
+  let content = [
+    {
+      type: 'text',
+      text: `# 지리적 분포 분석 (최근 ${days}일)\n\n${table}`,
     },
-    options: {
-      responsive: false,
-      animation: false,
-      plugins: {
-        title: {
-          display: true,
-          text: '국가별 인시던트 분포 (상위 10개국)',
-        },
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-        },
-      },
-    },
-  });
+  ];
 
-  const buffer = canvas.toBuffer('image/png');
-  const base64Image = buffer.toString('base64');
+  // 차트 지원이 있으면 막대 차트도 생성
+  if (CHART_SUPPORT) {
+    try {
+      const canvas = createCanvas(800, 500);
+      const ctx = canvas.getContext('2d');
 
-  return {
-    content: [
-      {
-        type: 'text',
-        text: `# 지리적 분포 분석 (최근 ${days}일)\n\n${table}`,
-      },
-      {
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: countries.slice(0, 10).map(c => c.key),
+          datasets: [{
+            label: '인시던트 수',
+            data: countries.slice(0, 10).map(c => c.doc_count),
+            backgroundColor: 'rgba(54, 162, 235, 0.8)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1,
+          }],
+        },
+        options: {
+          responsive: false,
+          animation: false,
+          plugins: {
+            title: {
+              display: true,
+              text: '국가별 인시던트 분포 (상위 10개국)',
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+
+      const buffer = canvas.toBuffer('image/png');
+      const base64Image = buffer.toString('base64');
+
+      content.push({
         type: 'image',
         data: base64Image,
         mimeType: 'image/png',
-      },
-    ],
-  };
+      });
+    } catch (error) {
+      console.error('Chart generation failed:', error.message);
+    }
+  }
+
+  return { content };
 }
 
 // 종합 보고서 생성

@@ -141,12 +141,18 @@ Claude Desktop → incident-analysis-mcp → MCP Server → OpenSearch
 
 - **Node.js**: 런타임 환경
 - **@modelcontextprotocol/sdk**: MCP 프로토콜 구현
-- **@opensearch-project/opensearch**: OpenSearch 클라이언트
-- **chart.js + canvas**: 차트 생성
-- **d3**: 데이터 시각화
+- **axios**: HTTP 클라이언트 (MCP 서버 통신)
+- **chart.js + canvas**: 차트 생성 (선택적 의존성)
+- **d3**: 데이터 시각화 (선택적 의존성)
 - **markdown-table**: 마크다운 테이블 생성
 - **date-fns**: 날짜 처리
 - **lodash**: 유틸리티 함수
+
+### 📊 차트 지원
+
+- **Linux/macOS**: 모든 차트 기능 지원 (테이블 + PNG 차트)
+- **Windows**: 테이블 전용 모드 (Canvas 설치 문제로 차트 기능 제외)
+- **자동 감지**: 시스템에 따라 차트 지원 여부를 자동으로 감지
 
 ## 📊 데이터 요구사항
 
