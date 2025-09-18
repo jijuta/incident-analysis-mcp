@@ -1,0 +1,35 @@
+{
+  "name": "incident-analysis-mcp",
+  "version": "1.0.0",
+  "description": "인시던트 분석 및 보고서 생성을 위한 MCP 서버",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "incident-analysis-mcp": "index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "echo 'Contact system administrator for OpenSearch connection details'"
+  },
+  "keywords": [
+    "mcp",
+    "incident",
+    "analysis",
+    "report",
+    "opensearch",
+    "security"
+  ],
+  "author": "InBridge Team",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "axios": "^1.7.0",
+    "chart.js": "^4.4.4",
+    "canvas": "^2.11.2",
+    "d3": "^7.9.0",
+    "markdown-table": "^3.0.3",
+    "date-fns": "^3.6.0",
+    "lodash": "^4.17.21"
+  }
+}
